@@ -1,0 +1,36 @@
+diff --git a/node_modules/react-native-worklets/src/WorkletsModule/NativeWorklets.native.ts b/node_modules/react-native-worklets/src/WorkletsModule/NativeWorklets.native.ts
+index e9ac98b..8de1d6d 100644
+--- a/node_modules/react-native-worklets/src/WorkletsModule/NativeWorklets.native.ts
++++ b/node_modules/react-native-worklets/src/WorkletsModule/NativeWorklets.native.ts
+@@ -26,7 +26,13 @@ class NativeWorklets implements IWorkletsModule {
+       global.__workletsModuleProxy === undefined &&
+       globalThis.__RUNTIME_KIND === RuntimeKind.ReactNative
+     ) {
+-      WorkletsTurboModule?.installTurboModule(bundleModeEnabled);
++      try {
++        WorkletsTurboModule?.installTurboModule(bundleModeEnabled);
++      } catch (e) {
++        // Fallback for older native binaries (e.g., in Expo Go SDK 54) that expect 0 arguments.
++        // @ts-ignore
++        WorkletsTurboModule?.installTurboModule();
++      }
+       if (__DEV__ && bundleModeEnabled) {
+         console.log(
+           '[Worklets] Bundle mode initialization: Downloaded the bundle for Worklet Runtimes.'
+diff --git a/node_modules/react-native-worklets/src/debug/checkCppVersion.ts b/node_modules/react-native-worklets/src/debug/checkCppVersion.ts
+index a7f8f0e..6d4512d 100644
+--- a/node_modules/react-native-worklets/src/debug/checkCppVersion.ts
++++ b/node_modules/react-native-worklets/src/debug/checkCppVersion.ts
+@@ -15,8 +15,10 @@ export function checkCppVersion() {
+   }
+   const ok = matchVersion(jsVersion, cppVersion);
+   if (!ok) {
+-    throw new WorkletsError(
+-      `Mismatch between JavaScript part and native part of Worklets (${jsVersion} vs ${cppVersion}).
++    // Warn instead of throw so the app continues running in Expo Go
++    // where the native binary version may differ from the JS version.
++    logger.warn(
++      `Mismatch between JavaScript part and native part of Worklets (${jsVersion} vs ${cppVersion}). Animations may not work correctly.
+     See \`https://docs.swmansion.com/react-native-worklets/docs/guides/troubleshooting#mismatch-between-javascript-part-and-native-part-of-worklets\` for more details.`
+     );
+   }
